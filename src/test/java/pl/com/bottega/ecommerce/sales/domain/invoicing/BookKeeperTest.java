@@ -31,7 +31,6 @@ class BookKeeperTest {
     private TaxPolicy taxPolicy;
     private BookKeeper keeper;
     ProductBuilder productBuilder;
-    //private Product sampleProduct;
 
     @BeforeEach
     void setUp() throws Exception {
@@ -97,16 +96,15 @@ class BookKeeperTest {
         when(factory.create(dummy)).thenReturn(invoice);
         when(taxPolicy.calculateTax(any(ProductType.class), any(Money.class))).thenReturn(new Tax(new Money(any(Integer.class)), "tax"));
 
-        Invoice resInvoice = keeper.issuance(request, taxPolicy);
+        keeper.issuance(request, taxPolicy);
         verify(taxPolicy, times(2)).calculateTax(any(ProductType.class), any(Money.class));
-
     }
 
     private class ProductBuilder {
-        private Id aggregateId;
-        private Money price;
-        private String name;
-        private ProductType productType;
+        private Id aggregateId = Id.generate();
+        private Money price = Money.ZERO;
+        private String name = "ProductName";
+        private ProductType productType = ProductType.STANDARD;
 
         public ProductBuilder withAggregateId(Id aggregateId) {
             this.aggregateId = aggregateId;
