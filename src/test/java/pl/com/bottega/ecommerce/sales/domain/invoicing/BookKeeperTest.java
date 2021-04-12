@@ -10,6 +10,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import pl.com.bottega.ddd.support.domain.BaseAggregateRoot;
 import pl.com.bottega.ecommerce.canonicalmodel.publishedlanguage.ClientData;
 import pl.com.bottega.ecommerce.canonicalmodel.publishedlanguage.Id;
 import pl.com.bottega.ecommerce.sales.domain.productscatalog.Product;
@@ -28,12 +29,13 @@ class BookKeeperTest {
     @Mock
     private TaxPolicy taxPolicy;
     private BookKeeper keeper;
-    private Product sampleProduct;
+    ProductBuilder productBuilder;
+    //private Product sampleProduct;
 
     @BeforeEach
     void setUp() throws Exception {
         keeper = new BookKeeper(factory);
-        sampleProduct = new Product(new Id("1"), new Money(10, Money.DEFAULT_CURRENCY), "miesko", ProductType.FOOD);
+        productBuilder = new ProductBuilder();
     }
 
     @Test
@@ -54,16 +56,53 @@ class BookKeeperTest {
         Id sampleId = Id.generate();
         ClientData dummy = new ClientData(sampleId, SAMPLE_CLIENT_NAME);
         InvoiceRequest request = new InvoiceRequest(dummy);
-        request.add(new RequestItem(sampleProduct.generateSnapshot(), 1, new Money(10, Money.DEFAULT_CURRENCY)));
+        Product product = productBuilder.withPrice(new Money(10,Money.DEFAULT_CURRENCY))
+                                        .withName("miesko")
+                                        .withAggregateId(Id.generate())
+                                        .withProductType(ProductType.FOOD)
+                                        .build();
+        request.add(new RequestItem(product.generateSnapshot(),1,new Money(10,Money.DEFAULT_CURRENCY)));
         Invoice invoice = new Invoice(Id.generate(), dummy);
 
         when(factory.create(dummy)).thenReturn(invoice);
-        when(taxPolicy.calculateTax(any(ProductType.class),any(Money.class))).thenReturn(new Tax(new Money(any(Integer.class)),"tax"));
+        when(taxPolicy.calculateTax(any(ProductType.class), any(Money.class))).thenReturn(new Tax(new Money(any(Integer.class)), "tax"));
 
         Invoice resInvoice = keeper.issuance(request, taxPolicy);
         assertTrue(nonNull(resInvoice));
-        assertEquals(invoice,resInvoice);
-        assertEquals(invoice.getItems().size(),1);
+        assertEquals(invoice, resInvoice);
+        assertEquals(invoice.getItems().size(), 1);
 
     }
+
+    private class ProductBuilder {
+        private Id aggregateId;
+        private Money price;
+        private String name;
+        private ProductType productType;
+
+        public ProductBuilder withAggregateId(Id aggregateId) {
+            this.aggregateId = aggregateId;
+            return this;
+        }
+
+        public ProductBuilder withPrice(Money price) {
+            this.price = price;
+            return this;
+        }
+
+        public ProductBuilder withName(String name) {
+            this.name = name;
+            return this;
+        }
+
+        public ProductBuilder withProductType(ProductType productType) {
+            this.productType = productType;
+            return this;
+        }
+
+        public Product build() {
+            return new Product(aggregateId, price, name, productType);
+        }
+    }
+
 }
