@@ -30,7 +30,7 @@ class BookKeeperTest {
     @Mock
     private TaxPolicy taxPolicy;
     private BookKeeper keeper;
-    ProductBuilder productBuilder;
+    private ProductBuilder productBuilder;
 
     @BeforeEach
     void setUp() throws Exception {
@@ -119,6 +119,25 @@ class BookKeeperTest {
         Invoice invoice2 = keeper.issuance(request, taxPolicy);
         assertEquals(invoice2.getItems(), invoice.getItems());
     }
+
     //testy zachowania
+
+    @Test
+    public void checkIfEmptyRequestDoesnotInvokeCalculateTaxMethod(){
+        Id sampleId = Id.generate();
+        ClientData dummy = new ClientData(sampleId, SAMPLE_CLIENT_NAME);
+        InvoiceRequest request = new InvoiceRequest(dummy);
+        Invoice invoice = new Invoice(Id.generate(), dummy);
+
+        when(factory.create(dummy)).thenReturn(invoice);
+
+        keeper.issuance(request, taxPolicy);
+        verify(taxPolicy, times(0)).calculateTax(any(ProductType.class), any(Money.class));
+    }
+
+    @Test
+    public void checkIfIssuanceWillThrowNullPointerExceptionIfRequestWillBeNull() {
+        assertThrows(NullPointerException.class,()->keeper.issuance(null,taxPolicy));
+    }
 
 }
