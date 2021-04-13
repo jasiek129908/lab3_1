@@ -39,19 +39,6 @@ class BookKeeperTest {
     }
 
     @Test
-    void test() {
-        Id sampleId = Id.generate();
-        ClientData dummy = new ClientData(sampleId, SAMPLE_CLIENT_NAME);
-        InvoiceRequest request = new InvoiceRequest(dummy);
-        Invoice invoice = new Invoice(Id.generate(), dummy);
-        when(factory.create(dummy)).thenReturn(invoice);
-
-        keeper.issuance(request, taxPolicy);
-
-        verifyNoInteractions(taxPolicy);
-    }
-
-    @Test
     void testCase1() {
         Id sampleId = Id.generate();
         ClientData dummy = new ClientData(sampleId, SAMPLE_CLIENT_NAME);
@@ -100,35 +87,38 @@ class BookKeeperTest {
         verify(taxPolicy, times(2)).calculateTax(any(ProductType.class), any(Money.class));
     }
 
-    private class ProductBuilder {
-        private Id aggregateId = Id.generate();
-        private Money price = Money.ZERO;
-        private String name = "ProductName";
-        private ProductType productType = ProductType.STANDARD;
+    //testy stanu
+    @Test
+    void checkIfEmptyRequestReturnsEmptyInvoice() {
+        Id sampleId = Id.generate();
+        ClientData dummy = new ClientData(sampleId, SAMPLE_CLIENT_NAME);
+        InvoiceRequest request = new InvoiceRequest(dummy);
+        Invoice invoice = new Invoice(Id.generate(), dummy);
 
-        public ProductBuilder withAggregateId(Id aggregateId) {
-            this.aggregateId = aggregateId;
-            return this;
-        }
-
-        public ProductBuilder withPrice(Money price) {
-            this.price = price;
-            return this;
-        }
-
-        public ProductBuilder withName(String name) {
-            this.name = name;
-            return this;
-        }
-
-        public ProductBuilder withProductType(ProductType productType) {
-            this.productType = productType;
-            return this;
-        }
-
-        public Product build() {
-            return new Product(aggregateId, price, name, productType);
-        }
+        when(factory.create(dummy)).thenReturn(invoice);
+        invoice = keeper.issuance(request, taxPolicy);
+        assertEquals(0,invoice.getItems().size());
     }
+
+    @Test
+    void checkIfRequestProductsAreSameAsReturnedInvoiceProducts() {
+        Id sampleId = Id.generate();
+        ClientData dummy = new ClientData(sampleId, SAMPLE_CLIENT_NAME);
+        InvoiceRequest request = new InvoiceRequest(dummy);
+        Product product = productBuilder.withPrice(new Money(10, Money.DEFAULT_CURRENCY))
+                .withName("miesko")
+                .withAggregateId(Id.generate())
+                .withProductType(ProductType.FOOD)
+                .build();
+        request.add(new RequestItem(product.generateSnapshot(), 1, new Money(10, Money.DEFAULT_CURRENCY)));
+        Invoice invoice = new Invoice(Id.generate(), dummy);
+
+        when(factory.create(dummy)).thenReturn(invoice);
+        when(taxPolicy.calculateTax(any(ProductType.class), any(Money.class))).thenReturn(new Tax(new Money(any(Integer.class)), "tax"));
+
+        Invoice invoice2 = keeper.issuance(request, taxPolicy);
+        assertEquals(invoice2.getItems(), invoice.getItems());
+    }
+    //testy zachowania
 
 }
